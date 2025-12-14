@@ -3,21 +3,20 @@ import { useEffect, useRef, useState } from 'react';
 export const useScrollAnimation = (options = {}) => {
   const elementRef = useRef(null);
   const [isVisible, setIsVisible] = useState(options.initialVisible || false);
-  const [prevScrollPos, setPrevScrollPos] = useState(0);
+  const hasAnimated = useRef(options.initialVisible || false);
 
   useEffect(() => {
+    if (hasAnimated.current) {
+      return;
+    }
+
     const observer = new IntersectionObserver(
       ([entry]) => {
-        const currentScrollPos = window.scrollY;
-        const scrollingDown = currentScrollPos > prevScrollPos;
-
-        if (entry.isIntersecting && scrollingDown) {
+        if (entry.isIntersecting && !hasAnimated.current) {
           setIsVisible(true);
-        } else if (!entry.isIntersecting && !scrollingDown) {
-          setIsVisible(false);
+          hasAnimated.current = true;
+          observer.disconnect();
         }
-
-        setPrevScrollPos(currentScrollPos);
       },
       {
         threshold: 0.2,
@@ -30,11 +29,9 @@ export const useScrollAnimation = (options = {}) => {
     }
 
     return () => {
-      if (elementRef.current) {
-        observer.unobserve(elementRef.current);
-      }
+      observer.disconnect();
     };
-  }, [prevScrollPos]);
+  }, []);
 
   return [elementRef, isVisible];
 };
